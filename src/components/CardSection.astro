@@ -1,0 +1,258 @@
+---
+// src/components/CardSection.astro
+import type { Item } from '@directus/sdk';
+
+export interface Props {
+    cards: Item[];
+    nomeCategoria: string;
+    nomeGeo: string | null;
+    cleanSlug: string;
+    tituloPatrocinio: string;
+    descricaoPatrocinioCurta: string;
+    descricaoPatrocinioCompleta: string;
+    directusBaseUrl: string;
+    getId: (value: any) => number | string | null;
+    city_name: string;
+}
+
+const { 
+    cards, 
+    nomeGeo, 
+    cleanSlug, 
+    tituloPatrocinio, 
+    descricaoPatrocinioCurta, 
+    descricaoPatrocinioCompleta, 
+    directusBaseUrl,
+    getId,
+    city_name
+} = Astro.props;
+---
+<style>
+    /* Estilos dos Cards (Movidos do [...slug].astro original) */
+    .cards-section-title {
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .card-grid {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .card-item {
+        display: flex;
+        justify-content: center;
+    }
+
+    .card-layout {
+        display: flex;
+        flex-direction: column;
+        background: #ffffff;
+        border-radius: 0.75rem;
+        border: 1px solid #ddd;
+        overflow: hidden;
+        width: 100%;
+        max-width: 600px;
+        min-height: 300px;
+    }
+
+    .card-layout-highlight {
+        border-color: #ffc107;
+        box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.4);
+    }
+
+    .card-media {
+        flex: 0 0 auto;
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: #777;
+        padding: 0.75rem;
+        min-height: 200px;
+    }
+
+    .card-content {
+        flex: 1 1 auto;
+        padding: 0.75rem 1rem;
+    }
+
+    .card-title {
+        margin: 0 0 0.4rem 0;
+        font-size: 1.05rem;
+    }
+
+    .card-text {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.9rem;
+        color: #555;
+    }
+
+    .card-text-link a {
+        font-size: 0.9rem;
+        color: #0066cc;
+        text-decoration: none;
+    }
+
+    .card-text-link a:hover {
+        text-decoration: underline;
+    }
+
+    .card-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.1rem 0.5rem;
+        border-radius: 999px;
+        background: #fff7e0;
+        color: #8a5a00;
+        font-size: 0.72rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }
+
+    @media (min-width: 768px) {
+        .card-layout {
+            flex-direction: row;
+            width: 600px;
+            min-height: 300px; /* Redefinido para evitar min-height fixo se o conteúdo for menor */
+        }
+
+        .card-media {
+            width: 300px;
+            min-height: 300px;
+            padding: 1rem;
+        }
+
+        .card-content {
+            width: 300px;
+            min-height: 300px;
+            padding: 1rem 1.25rem;
+        }
+    }
+</style>
+
+<section style="margin-bottom: 2rem;">
+    <h2 class="cards-section-title">Negócios cadastrados</h2>
+
+    <ul class="card-grid">
+        {/* 1) CARD1.BUILD – Patrocínio da página + Adsense 300x600 (Mantido de SP) */}
+        <li class="card-item">
+            <article class="card-layout card-layout-highlight">
+                {/* COLUNA ESQUERDA: bloco Adsense 300x600 */}
+                <div class="card-media">
+                    {/* AD ID AQUI (Ex: data-ad-slot de SP) */}
+                    <ins
+                        class="adsbygoogle"
+                        style="display:block"
+                        data-ad-client="ca-pub-3803893738575618"
+                        data-ad-slot="2377366455" 
+                        data-ad-format="auto"
+                        data-full-width-responsive="true">
+                    </ins>
+                    {/* Script Adsense deve ser executado no client-side. */}
+                    <script>
+                        {`(adsbygoogle = window.adsbygoogle || []).push({});`}
+                    </script>
+                </div>
+
+                {/* COLUNA DIREITA: texto dinâmico + CTA */}
+                <div class="card-content">
+                    <div class="card-badge">Patrocinador Destaque</div>
+                    <h3 class="card-title">
+                        {tituloPatrocinio}
+                    </h3>
+                    <p class="card-text">
+                        {descricaoPatrocinioCurta}
+                    </p>
+                    <p class="card-text">
+                        {descricaoPatrocinioCompleta}
+                    </p>
+                    <p class="card-text">
+                        Entre em contato com a equipe MAISPERTO para reservar este
+                        espaço e ativar sua campanha combinando anúncios locais,
+                        TikTags e blocos Adsense 300x600 alinhados ao seu objetivo de
+                        vendas.
+                    </p>
+                    <p class="card-text">
+                        <a
+                            href={`https://maisperto.com.br/anunciar/?url=/${cleanSlug}`}
+                            style="display:inline-block; margin-top:0.5rem; padding:0.65rem 1.2rem; background:#0070f3; color:white; border-radius:0.5rem; text-decoration:none; font-weight:600;"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Quero anunciar nesta página
+                        </a>
+                    </p>
+                </div>
+            </article>
+        </li>
+
+        {/* 2) CARDS DO DIRECTUS (Loop de Cards) */}
+        {cards.map((card) => {
+            const imagemId = getId(card.imagem_card_file);
+            const hasImage = imagemId && typeof imagemId === 'string' && directusBaseUrl;
+
+            return (
+                <li class="card-item">
+                    <article class="card-layout">
+                        <div class="card-media">
+                            {hasImage ? (
+                                <img
+                                    src={`${directusBaseUrl}/assets/${imagemId}`}
+                                    alt={card.titulo_card ?? 'Imagem do anúncio'}
+                                    style="max-width:100%; max-height:100%; object-fit:cover;"
+                                    loading="lazy"
+                                />
+                            ) : (
+                                <span>Imagem / vídeo do anúncio (300x600)</span>
+                            )}
+                        </div>
+
+                        <div class="card-content">
+                            <h3 class="card-title">
+                                {card.titulo_card ?? 'Anúncio sem título'}
+                            </h3>
+
+                            {card.descricao_curta && (
+                                <p class="card-text">
+                                    {card.descricao_curta}
+                                </p>
+                            )}
+
+                            {card.descricao_completa && (
+                                <p class="card-text">
+                                    {card.descricao_completa}
+                                </p>
+                            )}
+
+                            {card.url_destino && (
+                                <p class="card-text card-text-link">
+                                    <a
+                                        href={card.url_destino}
+                                        target="_blank"
+                                        rel="noopener noreferrer nofollow sponsored"
+                                    >
+                                        Visitar site do anunciante
+                                    </a>
+                                </p>
+                            )}
+                        </div>
+                    </article>
+                </li>
+            );
+        })}
+    </ul>
+
+    {cards.length === 0 && (
+        <p style="margin-top: 0.75rem; color: #777;">
+            Ainda não há outros negócios cadastrados para este nicho
+            {nomeGeo ? ` em ${nomeGeo}` : ` em ${city_name}`} além do espaço de patrocínio
+            principal. Esta página já está ativa para SEO e será preenchida
+            conforme novos anúncios forem publicados.
+        </p>
+    )}
+</section>

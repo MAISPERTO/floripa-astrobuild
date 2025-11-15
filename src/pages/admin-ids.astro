@@ -1,0 +1,74 @@
+---
+// src/pages/admin-ids.astro - Ferramenta de Referência de IDs de Nichos
+
+import client from '../lib/directus';
+import { readItems } from '@directus/sdk';
+
+// Busca TODAS as categorias, ordenando pelo slug completo para hierarquia
+const categorias = await client.request(
+  readItems('mp_categorias_locais', {
+    fields: ['id', 'nome_nicho', 'full_slug_nicho', 'nivel_nicho', 'parent_nicho'],
+    sort: ['full_slug_nicho'],
+    limit: -1,
+  })
+);
+
+// Mapeia para uma estrutura de lista, usando indentação para hierarquia
+const listaDeCategorias = categorias.map(cat => {
+    const nivel = cat.nivel_nicho || 1;
+    // Cria a string de indentação
+    const indentacao = Array(nivel).fill('—').join('');
+    
+    return {
+        id: cat.id,
+        nivel: nivel,
+        nomeDisplay: `${indentacao} Nv${nivel}: ${cat.nome_nicho}`,
+        slug: cat.full_slug_nicho
+    };
+});
+
+// A cidade padrão é Floripa, mas carregamos todas as categorias.
+const CITY_NAME = import.meta.env.PUBLIC_CITY_NAME || "Florianópolis";
+
+---
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>ADMIN: Lista de IDs de Nichos - {CITY_NAME}</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 20px; }
+        h1 { margin-bottom: 5px; }
+        code { background-color: #f4f4f4; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #e9e9e9; font-weight: 600; }
+        td:first-child { font-weight: bold; color: #005bbb; }
+        .nivel-display { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <h1>📋 Lista de IDs de Nichos Locais</h1>
+    <p>Use os **IDs** da primeira coluna para vincular cards no campo **nichos_locais_relacionados**.</p>
+    <p>Para um card aparecer em uma página **pai** (ex: <code>/veiculos-e-transporte/</code>), ele deve ser vinculado ao ID do nível pai.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th style="width: 300px;">Nicho e Nível</th>
+                <th>Full Slug</th>
+            </tr>
+        </thead>
+        <tbody>
+            {listaDeCategorias.map((cat) => (
+                <tr>
+                    <td>{cat.id}</td>
+                    <td class="nivel-display">{cat.nomeDisplay}</td>
+                    <td><code>/{cat.slug}</code></td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+</body>
+</html>
