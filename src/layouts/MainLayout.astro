@@ -1,12 +1,14 @@
 ---
-// src/layouts/MainLayout.astro
+// src/layouts/MainLayout.astro (Versão FINAL com Logotipo "Floripa.MP | Negócios Locais" ajustado)
 export interface Props {
   title: string;
   description: string;
   adsenseClient: string;
+  siteName: string; // 🟢 Necessário
+  siteTagline: string; // 🟢 Necessário
 }
 
-const { title, description, adsenseClient } = Astro.props;
+const { title, description, adsenseClient, siteName, siteTagline } = Astro.props;
 ---
 
 <!doctype html>
@@ -17,18 +19,14 @@ const { title, description, adsenseClient } = Astro.props;
     <title>{title}</title>
     <meta name="description" content={description} />
 
-    {/* Script principal do Adsense (carregado uma vez por página) */}
-    {/* Este script deve ser carregado no head para melhor performance */}
     <script
       async
       src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
       crossorigin="anonymous">
     </script>
-    
-    {/* AQUI ESTAVAM TODOS OS ESTILOS CSS. Idealmente, mova-os para um arquivo CSS. */}
-    {/* Por enquanto, vamos manter os estilos inline ou movê-los para o CardSection */}
+
     <style>
-      /* Estilos gerais removidos do [...slug].astro e index.astro */
+      /* Estilos gerais */
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
         margin: 0; 
@@ -36,14 +34,53 @@ const { title, description, adsenseClient } = Astro.props;
         background: #f5f5f7;
       }
       main {
-        max-width: 960px; 
+        max-width: 960px;
         margin: 0 auto;
+      }
+      /* 🟢 Estilos da Logo e Cabeçalho (NOVOS) */
+      .site-logo-container {
+        display: flex; 
+        align-items: baseline;
+        padding-top: 0.5rem;
+        padding-bottom: 0.75rem; 
+      }
+      .site-logo-container h1 {
+        font-size: 1.8rem; /* Fonte menor */
+        color: #1c1c1e;
+        margin: 0; 
+      }
+      .logo-tagline {
+        /* Cor mais suave e barra reta */
+        margin-left: 0.6rem;
+        font-size: 0.9rem; 
+        color: #888; /* Cinza suave */
+        font-weight: 500;
+        line-height: 1.8rem; 
+      }
+      .site-hr {
+        border: none; 
+        border-top: 1px solid #ddd; 
+        margin: 0; /* Linha divisória colada no logo */
       }
     </style>
 
   </head>
   <body>
     <main>
+      
+      <header>
+        <div class="site-logo-container">
+          <h1>
+            {siteName} 
+          </h1>
+          {/* Adição da barra e tagline */}
+          <span class="logo-tagline">
+            | {siteTagline} 
+          </span>
+        </div>
+        <hr class="site-hr" />
+      </header>
+
       <slot />
     </main>
   </body>

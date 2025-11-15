@@ -1,116 +1,121 @@
 ---
-// src/pages/[...slug].astro (VERSÃO FINAL COM CAMPO DE TEXTO DE IDs)
+// src/pages/[...slug].astro (VERSÃO FINAL COM LOGO E TAGLINE)
 
 import client from '../lib/directus';
 import { readItems, type Item } from '@directus/sdk';
 import MainLayout from '../layouts/MainLayout.astro';
-import CardSection from '../components/CardSection.astro'; 
-import Breadcrumbs from '../components/Breadcrumbs.astro'; 
+import CardSection from '../components/CardSection.astro'; 
+import Breadcrumbs from '../components/Breadcrumbs.astro'; 
 
 // VARIÁVEIS DE AMBIENTE: DEFINIDAS NO ESCOPO EXTERNO
 const DIRECTUS_BASE_URL = import.meta.env.PUBLIC_DIRECTUS_URL || "";
-const CITY_SLUG = import.meta.env.PUBLIC_CITY_SLUG || "floripa"; 
+const CITY_SLUG = import.meta.env.PUBLIC_CITY_SLUG || "floripa"; 
 const CITY_NAME = import.meta.env.PUBLIC_CITY_NAME || "Florianópolis";
+
+// 🟢 NOVO: Definição do Nome do Site Dinâmico (Ex: Floripa.MP, Sjc.MP)
+const SITE_SLUG_CAPITALIZED = CITY_SLUG.charAt(0).toUpperCase() + CITY_SLUG.slice(1);
+const SITE_NAME = `${SITE_SLUG_CAPITALIZED}.MP`;
+const SITE_TAGLINE = "Negócios Locais"; // 🟢 NOVO: Tagline
 
 // Tipagem e Utilitários (mantidos)
 interface Crumb { label: string; href: string | null };
 
 // Função utilitária: Revertida para a versão simples, pois não lemos mais M:M complexo
 function getId(value: any): number | string | null {
-  if (value == null) return null;
-  if (typeof value === 'number' || typeof value === 'string') return value;
-  
-  if (typeof value === 'object') {
-      // **VERIFICAÇÃO M:M PARA BAIRROS (Novo/Restaurado)**
-      // Assume que o campo de relacionamento é mp_bairros_id na tabela intermediária.
-      if (value.mp_bairros_id) return getId(value.mp_bairros_id); 
-      
-      // Caso contrário, retorna o ID do objeto simples (para M:1 ou objetos aninhados)
-      if ('id' in value) return (value as any).id;
-  }
-  return null;
+  if (value == null) return null;
+  if (typeof value === 'number' || typeof value === 'string') return value;
+  
+  if (typeof value === 'object') {
+      // **VERIFICAÇÃO M:M PARA BAIRROS (Novo/Restaurado)**
+      // Assume que o campo de relacionamento é mp_bairros_id na tabela intermediária.
+      if (value.mp_bairros_id) return getId(value.mp_bairros_id); 
+      
+      // Caso contrário, retorna o ID do objeto simples (para M:1 ou objetos aninhados)
+      if ('id' in value) return (value as any).id;
+  }
+  return null;
 }
 
 /**
- * 1) getStaticPaths: Define todas as URLs válidas
- */
+ * 1) getStaticPaths: Define todas as URLs válidas
+ */
 export async function getStaticPaths() {
-  
-  // SOLUÇÃO DO ERRO DE SCOPE
-  const citySlugForStaticPaths = import.meta.env.PUBLIC_CITY_SLUG || "floripa";
+  
+  // SOLUÇÃO DO ERRO DE SCOPE
+  const citySlugForStaticPaths = import.meta.env.PUBLIC_CITY_SLUG || "floripa";
 
-  // Buscar o ID da cidade no Directus pelo SLUG
-  const cidade = await client.request(
-    readItems('mp_cidades', {
-      filter: { slug_cidade: { _eq: citySlugForStaticPaths } }, 
-      fields: ['id'],
-      limit: 1,
-    })
-  );
+  // Buscar o ID da cidade no Directus pelo SLUG
+  const cidade = await client.request(
+    readItems('mp_cidades', {
+      filter: { slug_cidade: { _eq: citySlugForStaticPaths } }, 
+      fields: ['id'],
+      limit: 1,
+    })
+  );
 
-  const CIDADE_ID = cidade[0]?.id;
-  if (!CIDADE_ID) {
-    console.error(`CIDADE_ID para ${citySlugForStaticPaths} não encontrado. Rota desativada.`);
-    return [];
-  }
+  const CIDADE_ID = cidade[0]?.id;
+  if (!CIDADE_ID) {
+    console.error(`CIDADE_ID para ${citySlugForStaticPaths} não encontrado. Rota desativada.`);
+    return [];
+  }
 
-  // Todas as categorias/nichos ativas (SEM FILTRO DE CIDADE)
-  const categorias = await client.request(
-    readItems('mp_categorias_locais', {
-      filter: { ativo: { _eq: true } },
-      fields: ['id', 'full_slug_nicho'],
-      limit: -1,
-    })
-  );
+  // Todas as categorias/nichos ativas (SEM FILTRO DE CIDADE)
+  const categorias = await client.request(
+    readItems('mp_categorias_locais', {
+      filter: { ativo: { _eq: true } },
+      fields: ['id', 'full_slug_nicho'],
+      limit: -1,
+    })
+  );
 
-  // Todos os bairros/regiões ativos (FILTRO M:1)
-  const bairros = await client.request(
-    readItems('mp_bairros', {
-      filter: {
-        ativo: { _eq: true },
-        status: { _eq: 'published' },
-        cidade_relacionada: { _eq: CIDADE_ID } 
-      },
-      fields: ['id', 'slug_bairro', 'nome_bairro'],
-      limit: -1,
-    })
-  );
+  // Todos os bairros/regiões ativos (FILTRO M:1)
+  const bairros = await client.request(
+    readItems('mp_bairros', {
+      filter: {
+        ativo: { _eq: true },
+        status: { _eq: 'published' },
+        cidade_relacionada: { _eq: CIDADE_ID } 
+      },
+      fields: ['id', 'slug_bairro', 'nome_bairro'],
+      limit: -1,
+    })
+  );
 
-  const paths: { params: { slug: string } }[] = [];
-  
-  for (const cat of categorias) {
-    if (!cat.full_slug_nicho) continue;
-    const baseSlug = String(cat.full_slug_nicho).replace(/^\/+|\/+$/g, '');
+  const paths: { params: { slug: string } }[] = [];
+  
+  for (const cat of categorias) {
+    if (!cat.full_slug_nicho) continue;
+    const baseSlug = String(cat.full_slug_nicho).replace(/^\/+|\/+$/g, '');
 
-    paths.push({ params: { slug: baseSlug } });
+    paths.push({ params: { slug: baseSlug } });
 
-    for (const bairro of bairros) {
-      if (!bairro.slug_bairro) continue;
-      const bairroSlug = String(bairro.slug_bairro).replace(/^\/+|\/+$/g, '');
-      paths.push({ params: { slug: `${baseSlug}/${bairroSlug}` } });
-    }
-  }
+    for (const bairro of bairros) {
+      if (!bairro.slug_bairro) continue;
+      const bairroSlug = String(bairro.slug_bairro).replace(/^\/+|\/+$/g, '');
+      paths.push({ params: { slug: `${baseSlug}/${bairroSlug}` } });
+    }
+  }
 
-  return paths;
+  return paths;
 }
 
 /**
- * 2) Lógica da página em si: Carrega dados para a renderização
- */
+ * 2) Lógica da página em si: Carrega dados para a renderização
+ */
 
 // **RECALCULA CIDADE ID NO ESCOPO EXTERNO PARA A LÓGICA DE RENDERIZAÇÃO**
 const cidade = await client.request(
-    readItems('mp_cidades', {
-      filter: { slug_cidade: { _eq: CITY_SLUG } }, 
-      fields: ['id'],
-      limit: 1,
-    })
+    readItems('mp_cidades', {
+      filter: { slug_cidade: { _eq: CITY_SLUG } }, 
+      fields: ['id'],
+      limit: 1,
+    })
 );
 const CIDADE_ID = cidade[0]?.id;
 
 // Lógica de fallback
 if (!CIDADE_ID) {
-    return Astro.redirect('/404');
+    return Astro.redirect('/404');
 }
 
 // ----------------------------------------------------------------------------------
@@ -122,7 +127,7 @@ const cleanSlug = slugParam.replace(/^\/+|\/+$/g, '');
 const parts = cleanSlug.split('/').filter(Boolean);
 
 if (parts.length === 0) {
-  return Astro.redirect('/404');
+  return Astro.redirect('/404');
 }
 
 let categoryPath = '';
@@ -132,139 +137,139 @@ let bairroOuRegiao: Item | null = null;
 
 // Lógica de parsing da URL para encontrar categoria e bairro (omitida para brevidade)
 if (cleanSlug) {
-  const categoriasFull = await client.request(
-    readItems('mp_categorias_locais', {
-      filter: { full_slug_nicho: { _eq: cleanSlug }, ativo: { _eq: true } },
-      limit: 1,
-    })
-  );
-  categoria = categoriasFull[0];
+  const categoriasFull = await client.request(
+    readItems('mp_categorias_locais', {
+      filter: { full_slug_nicho: { _eq: cleanSlug }, ativo: { _eq: true } },
+      limit: 1,
+    })
+  );
+  categoria = categoriasFull[0];
 }
 
 if (!categoria) {
-  if (parts.length === 1) { return Astro.redirect('/404'); }
-  geoSlug = parts[parts.length - 1];
-  categoryPath = parts.slice(0, -1).join('/');
+  if (parts.length === 1) { return Astro.redirect('/404'); }
+  geoSlug = parts[parts.length - 1];
+  categoryPath = parts.slice(0, -1).join('/');
 
-  const categoriasEncontradas = await client.request(
-    readItems('mp_categorias_locais', {
-      filter: { full_slug_nicho: { _eq: categoryPath }, ativo: { _eq: true } },
-      limit: 1,
-    })
-  );
-  categoria = categoriasEncontradas[0];
+  const categoriasEncontradas = await client.request(
+    readItems('mp_categorias_locais', {
+      filter: { full_slug_nicho: { _eq: categoryPath }, ativo: { _eq: true } },
+      limit: 1,
+    })
+  );
+  categoria = categoriasEncontradas[0];
 
-  if (!categoria) { return Astro.redirect('/404'); }
+  if (!categoria) { return Astro.redirect('/404'); }
 } else { categoryPath = cleanSlug; }
 
 if (geoSlug) {
-  const bairrosEncontrados = await client.request(
-    readItems('mp_bairros', {
-      filter: { slug_bairro: { _eq: geoSlug }, ativo: { _eq: true }, status: { _eq: 'published' } },
-      limit: 1,
-    })
-  );
-  bairroOuRegiao = bairrosEncontrados[0] ?? null;
+  const bairrosEncontrados = await client.request(
+    readItems('mp_bairros', {
+      filter: { slug_bairro: { _eq: geoSlug }, ativo: { _eq: true }, status: { _eq: 'published' } },
+      limit: 1,
+    })
+  );
+  bairroOuRegiao = bairrosEncontrados[0] ?? null;
 
-  if (!bairroOuRegiao) { return Astro.redirect('/404'); }
+  if (!bairroOuRegiao) { return Astro.redirect('/404'); }
 }
 
 // 3) Busca de cards: AGORA SEM EXPANSÃO DE CAMPO (M:M)
 const cardsDeCidade = await client
-  .request(
-    readItems('mp_cards_anunciantes', {
-      filter: {
-        ativo: { _eq: true },
-        cidade_alvo: { _eq: CIDADE_ID } 
-      },
-      limit: 500,
-      sort: ['sort', 'id'],
-    // CORREÇÃO: SOLICITANDO CAMPOS RELACIONADOS M:M COMPLETOS PARA BAIRROS
-      fields: [
-        '*', 
-        'bairros_relacionados.*', // <-- EXPANSÃO NECESSÁRIA!
-      ]
-    })
-  )
-  .catch(() => {
-    return [];
-  });
-  
+  .request(
+    readItems('mp_cards_anunciantes', {
+      filter: {
+        ativo: { _eq: true },
+        cidade_alvo: { _eq: CIDADE_ID } 
+      },
+      limit: 500,
+      sort: ['sort', 'id'],
+    // CORREÇÃO: SOLICITANDO CAMPOS RELACIONADOS M:M COMPLETOS PARA BAIRROS
+      fields: [
+        '*', 
+        'bairros_relacionados.*', // <-- EXPANSÃO NECESSÁRIA!
+      ]
+    })
+  )
+  .catch(() => {
+    return [];
+  });
+  
 // Lógica de filtragem dos Cards (MANTIDA, MAS NICHOS REFEITA)
 const categoriaId = getId(categoria?.id);
 const bairroId = bairroOuRegiao ? getId(bairroOuRegiao.id) : null;
 
 const cards = (cardsDeCidade as any[]).filter((card) => {
-  if (!card || card.ativo === false) return false;
+  if (!card || card.ativo === false) return false;
 
-  // Filtro Nichos
-  const aplicaTodosNichos = !!card.aplica_todos_nichos;
-  let bateNicho = aplicaTodosNichos;
+  // Filtro Nichos
+  const aplicaTodosNichos = !!card.aplica_todos_nichos;
+  let bateNicho = aplicaTodosNichos;
 
-  if (!bateNicho && categoriaId != null) {
-    const catRelId = getId(card.categoria_oferta_relacionada);
-    if (catRelId === categoriaId) { bateNicho = true; }
+  if (!bateNicho && categoriaId != null) {
+    const catRelId = getId(card.categoria_oferta_relacionada);
+    if (catRelId === categoriaId) { bateNicho = true; }
 
-    // NOVA LÓGICA: PROCESSAMENTO DO CAMPO STRING 'nichos_locais_por_id'
-    if (!bateNicho && typeof card.nichos_locais_por_id === 'string' && card.nichos_locais_por_id) {
-      // Converte o ID da URL para string para comparação consistente
-      const currentCategoryId = String(categoriaId); 
-      
-      const linkedIds = card.nichos_locais_por_id.split(',')
-        .map((id: string) => id.trim()); // Remove espaços
+    // NOVA LÓGICA: PROCESSAMENTO DO CAMPO STRING 'nichos_locais_por_id'
+    if (!bateNicho && typeof card.nichos_locais_por_id === 'string' && card.nichos_locais_por_id) {
+      // Converte o ID da URL para string para comparação consistente
+      const currentCategoryId = String(categoriaId); 
+      
+      const linkedIds = card.nichos_locais_por_id.split(',')
+        .map((id: string) => id.trim()); // Remove espaços
 
-      // Verifica se a lista de IDs digitada contém o ID da categoria da URL
-      if (linkedIds.includes(currentCategoryId)) {
-        bateNicho = true;
-      }
-    }
-  }
+      // Verifica se a lista de IDs digitada contém o ID da categoria da URL
+      if (linkedIds.includes(currentCategoryId)) {
+        bateNicho = true;
+      }
+    }
+  }
 
-  if (!bateNicho) return false;
+  if (!bateNicho) return false;
 
-  // Filtro Bairro (Lógica M:M ou M:1 para bairros permanece inalterada)
-  if (!bairroId) return true;
+  // Filtro Bairro (Lógica M:M ou M:1 para bairros permanece inalterada)
+  if (!bairroId) return true;
 
-  const aplicaTodosBairros = !!card.aplica_todos_bairros;
+  const aplicaTodosBairros = !!card.aplica_todos_bairros;
 
-  if (aplicaTodosBairros) return true;
+  if (aplicaTodosBairros) return true;
 
-  if (Array.isArray(card.bairros_relacionados)) {
-    for (const b of card.bairros_relacionados) {
-      const bId = getId(b);
-      if (bId === bairroId) { return true; }
-    }
-  }
+  if (Array.isArray(card.bairros_relacionados)) {
+    for (const b of card.bairros_relacionados) {
+      const bId = getId(b);
+      if (bId === bairroId) { return true; }
+    }
+  }
 
-  return false;
+  return false;
 });
 
 
 // Títulos, descrição e textos dinâmicos (omitidos para brevidade)
-const nomeCategoria = categoria?.nome_nicho ?? 'Negócios locais';
+const nomeCategoria = categoria?.nome_nicho ?? SITE_TAGLINE; // Usando a Tagline como fallback
 const nomeGeo = bairroOuRegiao ? bairroOuRegiao.nome_bairro : null;
 
 const tituloPagina = nomeGeo
-  ? `${nomeCategoria} em ${nomeGeo}` : `${nomeCategoria} em ${CITY_NAME}`;
-  
+  ? `${nomeCategoria} em ${nomeGeo}` : `${nomeCategoria} em ${CITY_NAME}`;
+  
 const descricaoSEO =
-  categoria?.seo_meta_description ??
-  (nomeGeo
-    ? `Encontre negócios locais de ${nomeCategoria} no bairro ${nomeGeo} em ${CITY_NAME}.`
-    : `Encontre negócios locais de ${nomeCategoria} em toda a cidade de ${CITY_NAME}.`);
-    
+  categoria?.seo_meta_description ??
+  (nomeGeo
+    ? `Encontre ${SITE_TAGLINE.toLowerCase()} de ${nomeCategoria} no bairro ${nomeGeo} em ${CITY_NAME}.`
+    : `Encontre ${SITE_TAGLINE.toLowerCase()} de ${nomeCategoria} em toda a cidade de ${CITY_NAME}.`);
+    
 const textoGeoResumido = nomeGeo ? `no bairro ${nomeGeo}` : `em toda a cidade de ${CITY_NAME}`;
-  
+  
 const tituloPatrocinio = nomeGeo
-  ? `Seja o patrocinador oficial desta página de ${nomeCategoria} em ${nomeGeo}`
-  : `Seja o patrocinador oficial desta página de ${nomeCategoria} em ${CITY_NAME}`;
-  
+  ? `Seja o patrocinador oficial desta página de ${nomeCategoria} em ${nomeGeo}`
+  : `Seja o patrocinador oficial desta página de ${nomeCategoria} em ${CITY_NAME}`;
+  
 const descricaoPatrocinioCurta = `Este espaço 300x600 é reservado para destacar, em primeira posição, a sua marca de ${nomeCategoria} ${textoGeoResumido}.`;
 const descricaoPatrocinioCompleta = `Aqui você pode exibir um criativo no formato 300x600, atrair clientes do nicho ${nomeCategoria || 'local'} e ainda combinar com campanhas externas.`;
 
 // Breadcrumbs (omitido para brevidade)
 function slugToLabel(slug: string) {
-  return slug.split('-').map((s) => (s ? s[0].toUpperCase() + s.slice(1) : '')).join(' ');
+  return slug.split('-').map((s) => (s ? s[0].toUpperCase() + s.slice(1) : '')).join(' ');
 }
 
 const baseSegments = categoryPath.split('/').filter(Boolean);
@@ -274,56 +279,62 @@ breadcrumbs.push({ label: CITY_NAME, href: '/' });
 
 let accumulated = '';
 for (const seg of baseSegments) {
-  accumulated += (accumulated ? '/' : '') + seg;
-  breadcrumbs.push({ label: slugToLabel(seg), href: `/${accumulated}` });
+  accumulated += (accumulated ? '/' : '') + seg;
+  breadcrumbs.push({ label: slugToLabel(seg), href: `/${accumulated}` });
 }
 
 if (nomeGeo) {
-  breadcrumbs.push({ label: nomeGeo, href: null });
+  breadcrumbs.push({ label: nomeGeo, href: null });
 }
 
 // Dados a serem passados
 const layoutProps = {
-  title: tituloPagina,
-  description: descricaoSEO,
-  adsenseClient: "ca-pub-3803893738575618",
+  title: tituloPagina,
+  description: descricaoSEO,
+  adsenseClient: "ca-pub-3803893738575618",
+  siteName: SITE_NAME,
+  siteTagline: SITE_TAGLINE, // 🟢 NOVO: CORREÇÃO APLICADA AQUI
 }
 
 const cardSectionProps = {
-    cards: cards,
-    nomeCategoria: nomeCategoria,
-    nomeGeo: nomeGeo,
-    cleanSlug: cleanSlug,
-    tituloPatrocinio: tituloPatrocinio,
-    descricaoPatrocinioCurta: descricaoPatrocinioCurta,
-    descricaoPatrocinioCompleta: descricaoPatrocinioCompleta,
-    directusBaseUrl: DIRECTUS_BASE_URL,
-    getId: getId,
-    city_name: CITY_NAME,
+    cards: cards,
+    nomeCategoria: nomeCategoria,
+    nomeGeo: nomeGeo,
+    cleanSlug: cleanSlug,
+    tituloPatrocinio: tituloPatrocinio,
+    descricaoPatrocinioCurta: descricaoPatrocinioCurta,
+    descricaoPatrocinioCompleta: descricaoPatrocinioCompleta,
+    directusBaseUrl: DIRECTUS_BASE_URL,
+    getId: getId,
+    city_name: CITY_NAME,
 }
 
 ---
 
 <MainLayout {...layoutProps}>
-    <header style="margin-bottom: 1.5rem;">
-        <Breadcrumbs crumbs={breadcrumbs} />
-        <p style="margin: 0 0 0.25rem 0; font-size: 0.85rem; color: #666;">
-          Negócios Locais
-        </p>
-        <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem;">
-          {nomeCategoria}
-          {nomeGeo ? ` em ${nomeGeo}` : ''}
-        </h1>
-        {categoria?.descricao_curta_nicho && (
-          <p style="margin: 0; color: #555;">
-            {categoria.descricao_curta_nicho}
-          </p>
-        )}
-      </header>
-      <CardSection {...cardSectionProps} />
-      <footer style="font-size: 0.8rem; color: #888;">
-        <p style="margin: 0;">
-          Página dinâmica de {CITY_NAME}.
-        </p>
-      </footer>
+    <header style="margin-bottom: 1.5rem;">
+        <Breadcrumbs crumbs={breadcrumbs} />
+        
+        {/* 🔴 LINHA REMOVIDA: O texto "Negócios Locais" foi movido para a tagline da logo no MainLayout */}
+        {/*         <p style="margin: 0 0 0.25rem 0; font-size: 0.85rem; color: #666;">
+          Negócios Locais
+        </p>
+        */}
+
+        <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem;">
+          {nomeCategoria}
+          {nomeGeo ? ` em ${nomeGeo}` : ''}
+        </h1>
+        {categoria?.descricao_curta_nicho && (
+          <p style="margin: 0; color: #555;">
+            {categoria.descricao_curta_nicho}
+          </p>
+        )}
+      </header>
+      <CardSection {...cardSectionProps} />
+      <footer style="font-size: 0.8rem; color: #888;">
+        <p style="margin: 0;">
+          Página dinâmica de {CITY_NAME}.
+        </p>
+      </footer>
 </MainLayout>
