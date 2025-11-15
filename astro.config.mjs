@@ -3,19 +3,21 @@
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 
-// IMPORTANTE: Definir o output como 'server' e usar o adapter Node.js
-// é o que transforma seu site de estático para dinâmico (server-side rendering),
-// o que é essencial para rodar no Coolify/Nixpacks.
-
 export default defineConfig({
-  // 1. Configuração do Output: Define que o Astro deve gerar arquivos para um servidor
+  // Configuração essencial de SSR (Server-Side Rendering)
   output: 'server',
-  
-  // 2. Configuração do Adapter: Diz ao Astro para usar o ambiente Node.js
   adapter: node({
     mode: 'standalone' 
   }),
 
-  // Se você tiver outras integrações ou configurações globais (como site: '...', etc.),
-  // elas devem ser adicionadas aqui. Caso contrário, esta configuração minimalista é suficiente.
+  // FIX: Esta linha garante que o servidor se vincule a 0.0.0.0,
+  // permitindo que o Coolify/Nixpacks o acesse dentro do container.
+  server: {
+    host: true, // Garante que se vincule a 0.0.0.0
+    // A porta padrão para o Coolify/Nixpacks é 3000 ou 4321. 
+    // Se você não especificar, o Astro usará a padrão (geralmente 4321), 
+    // o que é fine, desde que o Coolify saiba. 
+  },
+  
+  // Suas outras configurações/integrações, se houver, iriam aqui.
 });
