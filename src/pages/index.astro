@@ -1,16 +1,112 @@
 ---
+// src/pages/index.astro (VERSÃO FINAL)
+import client from '../lib/directus';
+import { readItems } from '@directus/sdk';
+import MainLayout from '../layouts/MainLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 
+// 1. Variáveis de ambiente
+const CITY_SLUG = import.meta.env.PUBLIC_CITY_SLUG || "floripa"; 
+const CITY_NAME = import.meta.env.PUBLIC_CITY_NAME || "Florianópolis";
+
+// 2. Busca o ID da cidade (CORRIGIDO: usa slug_cidade)
+const cidade = await client.request(
+    readItems('mp_cidades', {
+      filter: { slug_cidade: { _eq: CITY_SLUG } }, // CORREÇÃO DE CAMPO APLICADA
+      fields: ['id'],
+      limit: 1,
+    })
+);
+const CIDADE_ID = cidade[0]?.id;
+
+if (!CIDADE_ID) {
+  console.error(`CIDADE_ID para ${CITY_SLUG} não encontrado no Directus.`);
+  // Em produção, isso pode lançar um erro ou redirecionar
+}
+
+// 3. Carrega bairros (FILTRO M:1 CORRIGIDO)
+const bairros = await client.request(
+  readItems('mp_bairros', {
+    filter: {
+        ativo: { _eq: true },
+        cidade_relacionada: { _eq: CIDADE_ID } // M:1 CORRETO
+    },
+    fields: ['id', 'nome_bairro', 'slug_bairro'],
+    sort: ['nome_bairro'],
+    limit: -1,
+  })
+);
+
+// 4. Carrega categorias (FILTRO REMOVIDO)
+const categorias = await client.request(
+  readItems('mp_categorias_locais', {
+    filter: {
+        ativo: { _eq: true },
+    },
+    fields: ['id', 'nome_nicho', 'full_slug_nicho'],
+    sort: ['nome_nicho'],
+    limit: -1,
+  })
+);
+
+// 5. Propriedades e Breadcrumbs
+const title = `${CITY_NAME} • Negócios Locais MAISPERTO`;
+const description = `Descubra negócios locais, serviços e profissionais em ${CITY_NAME}. Navegue por bairros e nichos para encontrar exatamente o que precisa em ${CITY_NAME}.`;
+const breadcrumbs = [{ label: CITY_NAME, href: null }];
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<MainLayout title={title} description={description} adsenseClient="ca-pub-3803893738575618">
+    <header style="margin-bottom: 1.5rem;">
+        <Breadcrumbs crumbs={breadcrumbs} />
+        <p style="margin: 0 0 0.25rem 0; font-size: 0.85rem; color: #666;">
+            {CITY_NAME} • Negócios Locais MAISPERTO
+        </p>
+        <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem;">
+            Encontre negócios locais por bairro e nicho em {CITY_NAME}
+        </h1>
+        <p style="margin: 0; color: #555;">
+            Versão inicial de testes conectada ao Directus.
+        </p>
+    </header>
+
+    <section style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">
+            Bairros cadastrados em {CITY_NAME}
+        </h2>
+        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-wrap:wrap; gap:0.4rem;">
+            {bairros.map((b) => (
+                <li style="background:#fff; border-radius:999px; border:1px solid #ddd; padding:0.25rem 0.75rem; font-size:0.85rem;">
+                    {b.nome_bairro}
+                </li>
+            ))}
+        </ul>
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">
+            Categorias locais (navegue por nichos)
+        </h2>
+        <ul style="list-style:none; padding:0; margin:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:0.75rem;">
+            {categorias.map((cat) => (
+                <li>
+                    <article style="background:#fff; border-radius:0.75rem; border:1px solid #ddd; padding:0.75rem 1rem;">
+                        <h3 style="margin:0 0 0.25rem 0; font-size:1.05rem;">
+                            <a href={`/${cat.full_slug_nicho}`} style="color:#005bbb; text-decoration:none;">
+                                {cat.nome_nicho}
+                            </a>
+                        </h3>
+                        <p style="margin:0; font-size:0.85rem; color:#666;">
+                            URL base: <code>{`/${cat.full_slug_nicho}`}</code>
+                        </p>
+                    </article>
+                </li>
+            ))}
+        </ul>
+    </section>
+
+    <footer style="font-size: 0.8rem; color: #888;">
+        <p style="margin: 0;">
+            Dados filtrados para **{CITY_NAME}** ({CITY_SLUG}).
+        </p>
+    </footer>
+</MainLayout>
